@@ -1,0 +1,101 @@
+---
+title: "MPG Analysis in Automatic vs. Manual Transmission Cars"
+author: "Pedro Cortes dos Santos"
+date: "26/01/2022"
+output: 
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+## Summary
+
+The Motor Trend Magazine is interested in exploring the relationship between a set of variables and miles per gallon (MPG). This report is focused in examine two topics:
+
+1. Is an automatic or manual transmission better for MPG?
+2. Quantify the MPF difference between automatic and manual transmissions
+
+For this, we'll be using the mtcars dataset (https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html)
+
+After performing this regression analysis, we see that collectively for all control variables considered together, there is significant effect, while for each control variable including transmission design effect is insignificant. Individually, transmission design shows significant difference on MPG. Human effort does improve efficiency - manual transmission is more efficient than auto transmission.
+
+```{r, echo = TRUE}
+library(knitr)
+data(mtcars);kable(summary(mtcars[1:5]));kable(summary(mtcars[6:10]))
+```
+
+This dataset has 10 control variables, 1 target variable (mpg) and 32 samples. 
+
+Figures 1 and 2 in Appendix I indicates that MPG has a decreasing trend for an automobile for five of the control variables (carb, Cyl, disp, hp and wt) and an increasing trend for other three (drat, qsec, vs) independently of the transmission type. For control variable gear, MPG shows a decreasing trend for manual transmission and an increasing trend for automatic transmission. However, the gear typer for automatic transmission are 3,4, while for manual transmission 4,5. This is possibly the reason for the difference.
+
+The Figure 3 in Appendix I is a box plot of Mileage by Transmission. The plot indicates that transmission design individually has a significant effect on mileage and yields the hypothesis that manual transmissions has better MPG than automatic transmissions.
+
+
+## Data Analysis
+
+
+```{r, echo = TRUE}
+fitbase=lm(mpg~factor(am)+.-am,data=mtcars) #Multivariate regression model
+fittotal=step(fitbase,trace=0) #Select the best fit
+
+
+#List of coefficients with 95% confidence interval, X2.5 = lower limit, X97.5 = Upper limit.
+kable(data.frame(summary(fittotal)$coef,confint(fittotal)))
+```
+
+
+```{r, echo = TRUE}
+fs=summary(fittotal)$fstat;pval=pf(fs[1],fs[2],fs[3],lower.tail=F)
+```
+
+The column "Estimate" above shows the intercept, (auto transmission, am==0), used as reference has high importance and coefficients of each control variable, which are essentially the rate at which MPG increases for each unit change in the relevant control variable, keeping all other variables constant. It indicates that manual transmission has a better mpg relative to auto transmission for all other variables held constant. The P value 0.0467 for a confidence interval of 95% indicates that it is statistically significant. Coefficients also show that only two other control variables (wt and qsec) have a statistically significant effect on mpg.
+
+The columns "Pr", "X2.5" and "X97.5" show that all control variables, except autotransmission have a p-value less than the significance level ($\alpha$	 = 0.05) the 95% confidence significance level, with confidence intervals (X2.5 and X97.5) not containing 0, hence, null-hypothesis for each of the control variables is rejected. We can infer that the important control variables have a significant effect on MPF for 95% confidence interval. Also that manual transmission has 30.53% better MPG relative to automatic transmission. 
+
+The Figure 4 in Appendix I shows the residual plots for the multivariate regression. Plots show that the standardized residuals are within [-2,2] and Cook's distances are less than 1, indicating that control variables are well leveraged and there is no undue influence of any of the control variables. This evaluation of residuals is based on the assumption of normality of residuals. A Shapiro-Wilkes test should negate or confirm this assumption.
+
+## Shapiro-Wikes Test
+
+
+```{r, echo = FALSE}
+s.test=shapiro.test(fittotal$resid);print(s.test)
+```
+ 
+The Shapiro test p-value (0.0804) is less than 0.1, attesting the normality of residuals. Our evaluation of the residuals is valid and the model is a good fit for the data.
+
+## Conclusion
+
+Manual transmission is better than automatic transmission with 30.53% better MPG, while accounting for significant confounders.
+
+## Appendix I:
+
+```{r, echo = FALSE}
+library(caret)
+par(mfrow=c(2,1))
+featurePlot(mtcars[mtcars$am==0,-c(1,9)],mtcars$mpg[mtcars$am==0],type=c('p','r'),
+col='orange',labels=c("Figure 1",""),main="MPG Trend for Auto Transmission",pch=19)
+```
+
+
+```{r, echo = FALSE}
+featurePlot(mtcars[mtcars$am==1,-c(1,9)],mtcars$mpg[mtcars$am==1],type=c('p','r'),
+col='purple',labels=c("Figure 2",""),main="MPG Trend for Manual Transmission",pch=19)
+```
+
+## Detailed Summary of Multivariate Regression:
+
+```{r, echo = FALSE}
+summary(fittotal)
+```
+
+```{r, echo = FALSE}
+par(mar=c(5,4,3,4))
+boxplot(mpg~am,data=mtcars,xlab="Figure 3 - Transmission Type : 0 - Auto, 1 - Manual",ylab="Mileage MPG",
+        main="MPG vs. Transmission Design")
+```
+
+
+```{r, echo = FALSE}
+par(mfrow=c(2,2),oma=c(6,2,6,2),mar=c(4,4,2,2))
+plot(fittotal,1:4);title(main="Residuals for Multivariate",sub="Figure 4",outer=T,cex.main=2,cex.sub=2)
+```
